@@ -1,0 +1,108 @@
+name: Despliegue en AWS con EKS
+on:
+  push:
+    branches:
+      - deploy
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+      CLUSTER_NAME: despachos-ventas-cluster
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Configurar credenciales de AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{secrets.AWS_ACCESS_KEY_ID}}
+          aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          aws-session-token: ${{secrets.AWS_SESSION_TOKEN}}
+          aws-region: ${{env.AWS_REGION}}
+      
+      - name: Login con ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Obtener el AWS Account Id
+        run: |
+          echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+      
+      - name: Crear las URL de los ECR
+        run: |
+          echo "DESPACHOS_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/back-despachos-springboot" >> $GITHUB_ENV
+          echo "VENTAS_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/back-ventas-springboot" >> $GITHUB_ENV
+          echo "FRONTEND_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/front-despacho" >> $GITHUB_ENV
+      
+      - name: Build back-despachos
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t $DESPACHOS_ECR:${GITHUB_SHA} \
+            ./back-Despachos_SpringBoot \
+            --load
+      - name: Subir imagen de Despachos al ECR
+        run: |
+          docker push $DESPACHOS_ECR:${GITHUB_SHA}
+      
+      - name: Build back-ventas
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t $VENTAS_ECR:${GITHUB_SHA} \
+            ./back-Ventas_SpringBoot \
+            --load
+      - name: Subir imagen de Ventas al ECR
+        run: |
+          docker push $VENTAS_ECR:${GITHUB_SHA}
+      
+      - name: Build frontend
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t $FRONTEND_ECR:${GITHUB_SHA} \
+            ./front_despacho \
+            --load
+      - name: Subir imagen del Frontend al ECR
+        run: |
+          docker push $FRONTEND_ECR:${GITHUB_SHA}
+      
+      - name: Instalación de Kubernetes
+        uses: azure/setup-kubectl@v4
+      
+      - name: Conectarse con EKS
+        run: |
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name $CLUSTER_NAME
+      
+      - name: Ejecutar el manifiesto de Kubernetes
+        run: |
+          kubectl apply -f infra/k8s/
+      
+      - name: Actualizar nombre de la imagen de Despachos
+        run: |
+          kubectl set image deployment/back-despachos \
+            back-despachos=$DESPACHOS_ECR:${GITHUB_SHA}
+      
+      - name: Actualizar nombre de la imagen de Ventas
+        run: |
+          kubectl set image deployment/back-ventas \
+            back-ventas=$VENTAS_ECR:${GITHUB_SHA}
+      
+      - name: Actualizar nombre de la imagen del Frontend
+        run: |
+          kubectl set image deployment/frontend \
+            frontend=$FRONTEND_ECR:${GITHUB_SHA}
+      
+      - name: Esperar despliegue de despachos
+        run: |
+          kubectl rollout status deployment/back-despachos
+      
+      - name: Esperar despliegue de ventas
+        run: |
+          kubectl rollout status deployment/back-ventas
+      
+      - name: Esperar despliegue del frontend
+        run: |
+          kubectl rollout status deployment/frontend
