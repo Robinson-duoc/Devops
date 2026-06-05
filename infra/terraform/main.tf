@@ -11,7 +11,7 @@ provider "aws" {
   region = "us-east-1"
 }
 
-# Roles: LabRole (Obligatorio para AWS Academy)
+# Roles: LabRole 
 data "aws_iam_role" "labrole" {
   name = "LabRole"
 }
