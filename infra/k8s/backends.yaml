@@ -1,0 +1,86 @@
+# ==========================================
+# MICROSERVICIO 1: BACKEND DESPACHOS
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: back-despachos
+spec:
+  replicas: 2 # Escalabilidad básica para alta disponibilidad exigida en el informe
+  selector:
+    matchLabels:
+      app: back-despachos
+  template:
+    metadata:
+      labels:
+        app: back-despachos
+    spec:
+      containers:
+        - name: back-despachos
+          # Apunta directamente al ECR de AWS que creamos con Terraform
+          image: TU_ID_AWS_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/back-despachos-springboot:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://mysql:3306/proyecto_devops
+            - name: SPRING_DATASOURCE_USERNAME
+              value: root
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: root
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: back-despachos-service # DNS interno: http://back-despachos-service:8080
+spec:
+  selector:
+    app: back-despachos
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+# ==========================================
+# MICROSERVICIO 2: BACKEND VENTAS
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: back-ventas
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: back-ventas
+  template:
+    metadata:
+      labels:
+        app: back-ventas
+    spec:
+      containers:
+        - name: back-ventas
+          image: TU_ID_AWS_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/back-ventas-springboot:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081 # Usamos puertos distintos para evitar colisiones lógicas
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://mysql:3306/proyecto_devops
+            - name: SPRING_DATASOURCE_USERNAME
+              value: root
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: root
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: back-ventas-service # DNS interno: http://back-ventas-service:8081
+spec:
+  selector:
+    app: back-ventas
+  ports:
+    - port: 8081
+      targetPort: 8081
+  type: ClusterIP
