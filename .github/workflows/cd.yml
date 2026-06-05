@@ -33,12 +33,16 @@ jobs:
           echo "DESPACHOS_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/back-despachos-springboot" >> $GITHUB_ENV
           echo "VENTAS_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/back-ventas-springboot" >> $GITHUB_ENV
           echo "FRONTEND_ECR=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/front-despacho" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       
       - name: Build back-despachos
         run: |
           docker buildx build \
             --platform linux/amd64 \
             -t $DESPACHOS_ECR:${GITHUB_SHA} \
+            -f ./back-Despachos_SpringBoot/Dockerfile \
             ./back-Despachos_SpringBoot \
             --load
       - name: Subir imagen de Despachos al ECR
@@ -50,6 +54,7 @@ jobs:
           docker buildx build \
             --platform linux/amd64 \
             -t $VENTAS_ECR:${GITHUB_SHA} \
+            -f ./back-Ventas_SpringBoot/Dockerfile \
             ./back-Ventas_SpringBoot \
             --load
       - name: Subir imagen de Ventas al ECR
@@ -61,6 +66,7 @@ jobs:
           docker buildx build \
             --platform linux/amd64 \
             -t $FRONTEND_ECR:${GITHUB_SHA} \
+            -f ./front_despacho/Dockerfile \
             ./front_despacho \
             --load
       - name: Subir imagen del Frontend al ECR
