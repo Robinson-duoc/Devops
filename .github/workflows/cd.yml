@@ -42,8 +42,8 @@ jobs:
           docker buildx build \
             --platform linux/amd64 \
             -t $DESPACHOS_ECR:${GITHUB_SHA} \
-            -f ./back-Despachos_SpringBoot/Dockerfile \
-            ./back-Despachos_SpringBoot \
+            -f ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO/Dockerfile \
+            ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO \
             --load
       - name: Subir imagen de Despachos al ECR
         run: |
@@ -54,8 +54,8 @@ jobs:
           docker buildx build \
             --platform linux/amd64 \
             -t $VENTAS_ECR:${GITHUB_SHA} \
-            -f ./back-Ventas_SpringBoot/Dockerfile \
-            ./back-Ventas_SpringBoot \
+            -f ./back-Ventas_SpringBoot/Springboot-API-REST/Dockerfile \
+            ./back-Ventas_SpringBoot/Springboot-API-REST \
             --load
       - name: Subir imagen de Ventas al ECR
         run: |
